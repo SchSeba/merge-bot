@@ -130,6 +130,12 @@ def parse_cli_arguments(testing_args=None):
         default=".",
     )
     parser.add_argument(
+        "--github-user-token",
+        type=str,
+        required=False,
+        help="The path to a github user access token.",
+    )
+    parser.add_argument(
         "--github-app-id",
         type=int,
         required=False,
@@ -139,7 +145,7 @@ def parse_cli_arguments(testing_args=None):
     parser.add_argument(
         "--github-app-key",
         type=str,
-        required=True,
+        required=False,
         help="The path to a github app private key.",
     )
     parser.add_argument(
@@ -152,7 +158,7 @@ def parse_cli_arguments(testing_args=None):
     parser.add_argument(
         "--github-cloner-key",
         type=str,
-        required=True,
+        required=False,
         help="The path to a github app private key.",
     )
     parser.add_argument(
@@ -187,11 +193,18 @@ def parse_cli_arguments(testing_args=None):
 def main():
     args = parse_cli_arguments()
 
-    with open(args.github_app_key, "r") as f:
-        gh_app_key = f.read().strip().encode()
+    gh_user_token = None
+    gh_app_key = None
+    gh_cloner_key = None
+    if args.github_user_token != "":
+        with open(args.github_user_token, "r", encoding='utf-8') as token_file:
+            gh_user_token = token_file.read().strip().encode().decode('utf-8')
+    else:
+        with open(args.github_app_key, "r") as f:
+            gh_app_key = f.read().strip().encode()
 
-    with open(args.github_cloner_key, "r") as f:
-        gh_cloner_key = f.read().strip().encode()
+        with open(args.github_cloner_key, "r") as f:
+            gh_cloner_key = f.read().strip().encode()
 
     slack_webhook = None
     if args.slack_webhook is not None:
@@ -210,6 +223,7 @@ def main():
         args.github_cloner_id,
         gh_cloner_key,
         slack_webhook,
+        gh_user_token,
         update_go_modules=args.update_go_modules,
         run_make=args.run_make,
     )
