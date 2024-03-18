@@ -139,7 +139,7 @@ def message_slack(webhook_url, msg):
             "blocks": [
                 {
                     "type": "section",
-                    "text": {"type": "plain_text", "text": msg[:500], "emoji": False},
+                    "text": {"type": "mrkdwn", "text": msg[:500]},
                 }
             ]
         },
@@ -458,8 +458,8 @@ def run(
         return False
 
     if created:
-        message_slack(slack_webhook, f"I created a new merge PR: {pr_url}")
+        message_slack(slack_webhook, f"I created a new merge PR: <{pr_url}>")
     else:
-        message_slack(slack_webhook, f"I updated existing merge PR: {pr_url}")
+        message_slack(slack_webhook, f"I updated existing merge PR: <{pr_url}>")
 
     return True
