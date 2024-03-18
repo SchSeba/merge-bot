@@ -190,6 +190,29 @@ def commit_go_mod_updates(repo):
 
     return
 
+def run_additional_command(command,repo):
+    try:
+        proc = subprocess.run(
+            f"{command}", shell=True, check=True, capture_output=True
+        )
+        logging.debug(f"command output: {proc.stdout.decode()}")
+    except subprocess.CalledProcessError as err:
+        raise RepoException(
+            f"Unable to run command: {err}: {err.stderr.decode()}"
+        )
+
+    if repo.is_dirty():
+        try:
+            repo.git.add(all=True)
+            repo.git.commit(
+                "-m", "downstream only change"
+            )
+        except Exception as err:
+            err.extra_info = f"Unable to commit file changes after running the command {command}"
+            raise err
+
+    return
+
 
 def push(gitwd, merge):
     result = gitwd.remotes.merge.push(refspec=f"HEAD:{merge.branch}", force=True)
@@ -352,6 +375,7 @@ def run(
     gh_cloner_key,
     slack_webhook,
     gh_user_token,
+    additional_command,
     update_go_modules=False,
 ):
     logging.basicConfig(
@@ -422,6 +446,9 @@ def run(
 
         if update_go_modules:
             commit_go_mod_updates(gitwd)
+
+        if additional_command != "":
+            run_additional_command(additional_command,gitwd)
     except RepoException as ex:
         logging.error(ex)
         message_slack(

@@ -168,6 +168,12 @@ def parse_cli_arguments(testing_args=None):
         help="The path where credentials for the slack webhook are.",
     )
     parser.add_argument(
+        "--additional-command",
+        type=str,
+        required=False,
+        help="Additional command to run and create a commit.",
+    )
+    parser.add_argument(
         "--update-go-modules",
         action="store_true",
         default=False,
@@ -217,6 +223,7 @@ def main():
         gh_cloner_key,
         slack_webhook,
         gh_user_token,
+        args.additional_command,
         update_go_modules=args.update_go_modules,
     )
 
