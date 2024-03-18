@@ -190,6 +190,31 @@ def commit_go_mod_updates(repo):
 
     return
 
+def run_additional_command(command: str, message: str ,repo: "git.Repo"):
+    try:
+        logging.info(f"Running additional command {command}")
+        proc = subprocess.run(
+            f"{command}", shell=True, check=True, capture_output=True
+        )
+        logging.debug(f"command output: {proc.stdout.decode()}")
+    except subprocess.CalledProcessError as err:
+        raise RepoException(
+            f"Unable to run command: {err}: {err.stderr.decode()}"
+        )
+
+    if repo.is_dirty():
+        try:
+            repo.git.add(all=True)
+            repo.git.commit(
+                "-m", message
+            )
+            repo.git.commit
+        except Exception as err:
+            err.extra_info = f"Unable to commit file changes after running the command {command}"
+            raise err
+
+    return
+
 
 def push(gitwd, merge):
     result = gitwd.remotes.merge.push(refspec=f"HEAD:{merge.branch}", force=True)
@@ -268,7 +293,7 @@ def init_working_dir(
     gh_cloner_app,  # Write permission on merge
     bot_email,
     bot_name,
-):
+) -> git.Repo:
     gitwd = git.Repo.init(path=".")
 
     for remote, url in [
@@ -321,11 +346,11 @@ def init_working_dir(
     working_branch = f"dest/{dest_branch}"
     logging.info(f"Checking out {working_branch}")
 
-    logging.info(f"Checking for existing merge branch {merge_branch} in {merge_url}")
-    merge_ref = gitwd.git.ls_remote("merge", merge_branch, heads=True)
-    if len(merge_ref) > 0:
-        logging.info("Fetching existing merge branch")
-        gitwd.remotes.merge.fetch(merge_branch)
+    # logging.info(f"Checking for existing merge branch {merge_branch} in {merge_url}")
+    # merge_ref = gitwd.git.ls_remote("merge", merge_branch, heads=True)
+    # if len(merge_ref) > 0:
+    #     logging.info("Fetching existing merge branch")
+    #     gitwd.remotes.merge.fetch(merge_branch)
 
     head_commit = gitwd.remotes.dest.refs[dest_branch].commit
     if "merge" in gitwd.heads:
@@ -352,10 +377,12 @@ def run(
     gh_cloner_key,
     slack_webhook,
     gh_user_token,
+    additional_command="",
+    additional_command_message="",
     update_go_modules=False,
 ):
     logging.basicConfig(
-        format="%(levelname)s - %(message)s", stream=sys.stdout, level=logging.INFO
+        format="%(levelname)s - %(message)s", stream=sys.stdout, level=logging.DEBUG
     )
 
     if gh_user_token is not None:
@@ -422,6 +449,9 @@ def run(
 
         if update_go_modules:
             commit_go_mod_updates(gitwd)
+
+        if additional_command != "":
+            run_additional_command(additional_command,additional_command_message,gitwd)
     except RepoException as ex:
         logging.error(ex)
         message_slack(
