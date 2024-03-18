@@ -158,3 +158,5 @@ tags
 [._]*.un~
 
 .idea/
+.venv/
+.vscode/
